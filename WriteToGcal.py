@@ -7,7 +7,7 @@ import pickle
 
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
-def main():
+def authenticate():
     creds = None
 
     if os.path.exists('token.pickle'):
@@ -28,10 +28,9 @@ def main():
 
     service = build('calendar', 'v3', credentials = creds)
 
-    addEvent('testevent', service)
+    return service
 
-
-def addEvent(eventdetails, service):
+def add_event(eventdetails, service):
     event = {
         'summary': eventdetails,
         'start': {
@@ -49,3 +48,9 @@ def addEvent(eventdetails, service):
 
 if __name__ == '__main__':
     main()
+
+
+
+
+# added entries: ['11/07/2024 @ 12:00 -> 11/07/2024 @ 13:00|test appointment with timeslot', '11/07/2024 [1] test appointment without timeslot']
+# deleted entries: []
