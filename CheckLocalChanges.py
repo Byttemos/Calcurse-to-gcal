@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import difflib
 from WriteToGcal import authenticate, add_event
+from datetime import datetime
 
 
 
@@ -61,42 +62,81 @@ def get_diffs(event):
 
 def format_entries(entries, entry_types):
     '''Recieve 2d array of added and deleted entries and types, and return google-api compliant dictionaries'''
-    def has_timeslot(event_string):
-        timeslot_pattern = r'\b\d{2}/\d{2}/\d{4} @ \d{2}:\d{2} -> \d{2}/\d{2}/\d{4} @ \d{2}:\d{2}\b'
-        return bool(re.search(timeslot_pattern, event_string))
+
+    def has_datetimeslot(event_string):
+        '''Receive single event string, return boolean true if it contains a timeslot and false otherwise'''
+        if '->' in event_string:
+            return True
+        if '[1]' in event_string:
+            return False
 
 
     def get_event_summary(event_string):
-        # Regular expression to match the event with a time range and extract the summary after the `|`
-        timeslot_pattern = r'\b\d{2}/\d{2}/\d{4} @ \d{2}:\d{2} -> \d{2}/\d{2}/\d{4} @ \d{2}:\d{2}\b\s*\|\s*(.*)'
-        
-        # If the event matches the time range pattern (with a '|')
-        match = re.search(timeslot_pattern, event_string)
-        if match:
-            return match.group(1).strip()  # Return the part after the `|`
-        
-        # Regular expression to match event without a time range
-        # This pattern also accounts for the `[n]` identifier after the date
-        without_timeslot_pattern = r'\b\d{2}/\d{2}/\d{4} \[\d+\]\s*(.*)'
-        
-        match = re.search(without_timeslot_pattern, event_string)
-        if match:
-            return match.group(1).strip()  # Return the remaining part (summary)
-        
-        return ""  # Return an empty string if no valid summary is found
+        '''Receive single event string, return string containing event summary'''
+        if has_datetimeslot(event_string):
+            summary = event_string[event_string.find('|')+1:-1]
+            return summary
+        if not has_datetimeslot(event_string):
+            summary = event_string[event_string.find(']')+1:-1]
+            return summary
+
+    def get_event_datetime(event_string):
+        '''Receive single event string, return tuple of ISO-compliant datetime values for start and end time'''
+
+        def get_iso_datetime(date_string, time_string = None):
+            '''Receive datetime in a string, convert it to a datetime object and finally convert and return this object in ISO standard format'''
+            if not time_string:
+                datetime_string = date_string + '/' + time_string
+                iso_datetime = datetime.strptime(datetime_string, '%m/%d/%Y/%H:%M').isoformat()
+                return iso_datetime
+            else:
+                iso_datetime = datetime.strptime(date_string, '%m/%d/%Y').isoformat()
+                return iso_datetime
+
+        if has_datetimeslot(event_string):
+            dateslot = (event_string[:10], event_string[event_string.find('>')+2:event_string.find('>')+2+10])
+            timeslot = (event_string[13:19].strip(), event_string[event_string.find('|')-5:event_string.find('|')])
+        if not has_datetimeslot(event_string):
+            dateslot = (event_string[:10], event_string[:10])
+            timeslot = ''
+        iso_formatted_time = (get_iso_datetime(dateslot[0], timeslot[0]), get_iso_datetime(dateslot[1], timeslot[1]))
+        return iso_formatted_time
+
+
 
 
     print(f'type: {entry_types}')
     print(f'added entries: {entries[0]}')
     print(f'deleted entries: {entries[1]}')
-    
+    all_entries = [{}]
     if entry_types == 'apts':
         for entry in entries[0]:
-            if has_timeslot(entry)
+            if has_datetimeslot(entry):
                 event_details = {'summary': get_event_summary(entry), 
-                                 'start': {'datetime': }
+                                 'start': {
+                                    'datetime': get_event_datetime(entry)[0],
+                                    'timeZone': 'Europe/Copenhagen',
+                                     },
+                                 'end': {
+                                    'dateTime': get_event_datetime(entry)[1],
+                                    'timeZone': 'Europe/Copenhagen',
+                                     },
                                  }
-    
+                all_entries.append(event_details)
+            if not has_datetimeslot(entry):
+                event_details = {'summary': get_event_summary(entry), 
+                                  'start': {
+                                     'datetime': get_event_datetime(entry)[0],
+                                     'timeZone': 'Europe/Copenhagen',
+                                     },
+                                  'end': {
+                                      'dateTime': get_event_datetime(entry)[1],
+                                      'timeZone': 'Europe/Copenhagen',
+                                     },
+                                 }
+                all_entries.append(event_details)
+    print(all_entries)
+    return all_entries 
 
 
             

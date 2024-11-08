@@ -51,6 +51,10 @@ if __name__ == '__main__':
 
 
 
-
-# added entries: ['11/07/2024 @ 12:00 -> 11/07/2024 @ 13:00|test appointment with timeslot', '11/07/2024 [1] test appointment without timeslot']
+# EXAMPLE DATA
+# added entries: ['11/07/2024 @ 12:00 -> 11/07/2024 @ 13:00|test appointment with timeslot', 
+# '11/07/2024 [1] test appointment without timeslot']
 # deleted entries: []
+
+# EXAMPLE DATETIME ISO FORMAT
+#        '2024-11-09T17:09:12.079482'
