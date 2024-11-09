@@ -5,9 +5,10 @@ from datetime import datetime, timedelta
 import os.path
 import pickle
 
-SCOPES = ['https://www.googleapis.com/auth/calendar']
+
 
 def authenticate():
+    SCOPES = ['https://www.googleapis.com/auth/calendar']
     creds = None
 
     if os.path.exists('token.pickle'):
@@ -30,26 +31,12 @@ def authenticate():
 
     return service
 
-def add_event(eventdetails, service):
-    event = {
-        'summary': eventdetails,
-        'start': {
-            'dateTime': (datetime.utcnow() + timedelta(days=1)).isoformat(),
-            'timeZone': 'Europe/Copenhagen',
-        },
-        'end': {
-            'dateTime': (datetime.utcnow() + timedelta(days=1, hours=1)).isoformat(),
-            'timeZone': 'Europe/Copenhagen',
-        },
-    }
-    created_event = service.events().insert(calendarId='hriskaer@gmail.com', body = event).execute()
-    print(f"Created event: {created_event['id']}")
+def add_event(new_entries):
+    service = authenticate()
 
-
-if __name__ == '__main__':
-    main()
-
-
+    for entry in new_entries:
+        created_event = service.events().insert(calendarId='hriskaer@gmail.com', body = entry).execute()
+        print(f"Created event: {created_event['id']}")
 
 # EXAMPLE DATA
 # added entries: ['11/07/2024 @ 12:00 -> 11/07/2024 @ 13:00|test appointment with timeslot', 

@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import shutil
 import difflib
-from WriteToGcal import authenticate, add_event
+from WriteToGcal import add_event
 from datetime import datetime
 
 
@@ -74,10 +74,10 @@ def format_entries(entries, entry_types):
     def get_event_summary(event_string):
         '''Receive single event string, return string containing event summary'''
         if has_datetimeslot(event_string):
-            summary = event_string[event_string.find('|')+1:-1]
+            summary = event_string[event_string.find('|')+1:]
             return summary
         if not has_datetimeslot(event_string):
-            summary = event_string[event_string.find(']')+1:-1]
+            summary = event_string[event_string.find(']')+1:]
             return summary
 
     def get_event_datetime(event_string):
@@ -85,21 +85,23 @@ def format_entries(entries, entry_types):
 
         def get_iso_datetime(date_string, time_string = None):
             '''Receive datetime in a string, convert it to a datetime object and finally convert and return this object in ISO standard format'''
-            if not time_string:
+            if time_string:
                 datetime_string = date_string + '/' + time_string
                 iso_datetime = datetime.strptime(datetime_string, '%m/%d/%Y/%H:%M').isoformat()
                 return iso_datetime
             else:
-                iso_datetime = datetime.strptime(date_string, '%m/%d/%Y').isoformat()
+                iso_datetime = datetime.strptime(date_string, '%m/%d/%Y').date().isoformat()
                 return iso_datetime
 
         if has_datetimeslot(event_string):
             dateslot = (event_string[:10], event_string[event_string.find('>')+2:event_string.find('>')+2+10])
             timeslot = (event_string[13:19].strip(), event_string[event_string.find('|')-5:event_string.find('|')])
+            iso_formatted_time = (get_iso_datetime(dateslot[0], timeslot[0]), get_iso_datetime(dateslot[1], timeslot[1]))
         if not has_datetimeslot(event_string):
             dateslot = (event_string[:10], event_string[:10])
-            timeslot = ''
-        iso_formatted_time = (get_iso_datetime(dateslot[0], timeslot[0]), get_iso_datetime(dateslot[1], timeslot[1]))
+            iso_formatted_time = (get_iso_datetime(dateslot[0]), get_iso_datetime(dateslot[1]))
+        # iso_formatted_time = (get_iso_datetime(dateslot[0], timeslot[0]), get_iso_datetime(dateslot[1], timeslot[1]))
+        print(type(iso_formatted_time[0]), type(iso_formatted_time[1]))
         return iso_formatted_time
 
 
@@ -108,13 +110,13 @@ def format_entries(entries, entry_types):
     print(f'type: {entry_types}')
     print(f'added entries: {entries[0]}')
     print(f'deleted entries: {entries[1]}')
-    all_entries = [{}]
+    all_entries = []
     if entry_types == 'apts':
         for entry in entries[0]:
             if has_datetimeslot(entry):
                 event_details = {'summary': get_event_summary(entry), 
                                  'start': {
-                                    'datetime': get_event_datetime(entry)[0],
+                                    'dateTime': get_event_datetime(entry)[0],
                                     'timeZone': 'Europe/Copenhagen',
                                      },
                                  'end': {
@@ -126,22 +128,21 @@ def format_entries(entries, entry_types):
             if not has_datetimeslot(entry):
                 event_details = {'summary': get_event_summary(entry), 
                                   'start': {
-                                     'datetime': get_event_datetime(entry)[0],
+                                 'date': get_event_datetime(entry)[0][:10],
                                      'timeZone': 'Europe/Copenhagen',
                                      },
-                                  'end': {
-                                      'dateTime': get_event_datetime(entry)[1],
+                                    'end': {
+                                    'date': get_event_datetime(entry)[1],
                                       'timeZone': 'Europe/Copenhagen',
                                      },
                                  }
                 all_entries.append(event_details)
-    print(all_entries)
-    return all_entries 
-
+    print(f'entries sent to gcal: {all_entries}')
+    add_event(all_entries)
 
             
 def on_modified(event):
-    '''Filter event types that arent modifications from the eventhandler trigger'''
+    '''Filter event types that arent modifications from the eventhandler trigger, and send formatted new entries to WriteToGcal'''
     #When time comes for reading cloud stored entries, this function will propably also handle runaway loops
     if event.event_type == 'modified':
         get_diffs(event)
